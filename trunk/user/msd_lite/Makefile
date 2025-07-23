@@ -9,9 +9,9 @@ all: download_test config_test
 download_test:
 	( if [ ! -d $(THISDIR)/$(SRC_NAME) ]; then \
 		git clone https://github.com/rozhuk-im/msd_lite.git ; \
-		sed -i 's/SYS_pidfd_open/pidfd_open/g' $(THISDIR)/$(SRC_NAME)/src/liblcb/src/threadpool/threadpool.c ; \
 		cd $(SRC_NAME) ; \
 		git submodule update --init --recursive ; \
+		sed -i 's/SYS_pidfd_open/pidfd_open/g' src/liblcb/src/threadpool/threadpool.c ; \
 		patch -p1 -i ../msd_lite.diff ; \
 		cd src/liblcb ; \
 		patch -p1 -i ../../../liblcb_msd_lite.diff ; \
