@@ -93,7 +93,7 @@ jobs:
         sed -i 's/192.168.2.100/10.10.10.101/g' ./user/shared/defaults.h
         sed -i 's/192.168.2.244/10.10.10.199/g' ./user/shared/defaults.h
         #修改默认wifi密码
-        #sed -i 's/1234567890/d' ./user/shared/defaults.h
+        sed -i '0,/1234567890/s//2019qwer/; 0,/1234567890/s//2025qwer/' ./user/shared/defaults.h
         
         ################################################################################################
         #因不同型号配置功能不一样，所以先把配置项删除，如果你自己要添加其他的，也要写上删除这一条，切记！！！
@@ -108,8 +108,8 @@ jobs:
         
         sed -i '/CONFIG_FIRMWARE_INCLUDE_TRANSMISSION/d' .config 
         sed -i '/CONFIG_FIRMWARE_INCLUDE_TRANSMISSION_WEB_CONTROL/d' .config
-        #sed -i '/CONFIG_FIRMWARE_INCLUDE_ARIA/d' .config
-        #sed -i '/CONFIG_FIRMWARE_INCLUDE_ARIA_WEB_CONTROL/d' .config
+        sed -i '/CONFIG_FIRMWARE_INCLUDE_ARIA/d' .config
+        sed -i '/CONFIG_FIRMWARE_INCLUDE_ARIA_WEB_CONTROL/d' .config
         sed -i '/CONFIG_FIRMWARE_INCLUDE_ZEROTIER/d' .config
         sed -i '/CONFIG_FIRMWARE_INCLUDE_FRPC/d' .config
         sed -i '/CONFIG_FIRMWARE_INCLUDE_ALIDDNS/d' .config
@@ -124,37 +124,25 @@ jobs:
         sed -i '/CONFIG_FIRMWARE_INCLUDE_NPC/d' .config
         sed -i '/CONFIG_FIRMWARE_WEBUI_HIDE_VPN/d' .config
         sed -i '/CONFIG_FIRMWARE_INCLUDE_OPENVPN/d' .config
-        sed -i '/CONFIG_FIRMWARE_INCLUDE_MSD_LITE/d' .config
         ######################################################################
         #以下选项是定义你需要的功能（y=集成,n=忽略），重新写入到.config文件
         ######################################################################
         ##内网穿透
-        echo "CONFIG_FIRMWARE_INCLUDE_NPC=n" >> .config
-        echo "CONFIG_FIRMWARE_INCLUDE_ZEROTIER=n" >> .config #zerotier ~1.3M
-        echo "CONFIG_FIRMWARE_INCLUDE_FRPC=n" >> .config  #frpc
-        #echo "CONFIG_FIRMWARE_INCLUDE_ALIDDNS=n" >> .config #aliddns
+        echo "CONFIG_FIRMWARE_INCLUDE_NPC=y" >> .config
+        echo "CONFIG_FIRMWARE_INCLUDE_ZEROTIER=y" >> .config #zerotier ~1.3M
+        echo "CONFIG_FIRMWARE_INCLUDE_FRPC=y" >> .config  #frpc
+        echo "CONFIG_FIRMWARE_INCLUDE_ALIDDNS=y" >> .config #aliddns
         ##科学上网##
-        echo "CONFIG_FIRMWARE_INCLUDE_SHADOWSOCKS=n" >> .config
-        echo "CONFIG_FIRMWARE_INCLUDE_V2RAY=n" >> .config
-        echo "CONFIG_FIRMWARE_INCLUDE_XRAY=n" >> .config
-        echo "CONFIG_FIRMWARE_INCLUDE_TROJAN=n" >> .config
+        #echo "CONFIG_FIRMWARE_INCLUDE_SHADOWSOCKS=y" >> .config
+        #echo "CONFIG_FIRMWARE_INCLUDE_V2RAY=y" >> .config
+        #echo "CONFIG_FIRMWARE_INCLUDE_XRAY=y" >> .config
+        #echo "CONFIG_FIRMWARE_INCLUDE_TROJAN=y" >> .config
         ##vpn
-        echo "CONFIG_FIRMWARE_INCLUDE_OPENVPN=n" >> .config
-        echo "CONFIG_FIRMWARE_INCLUDE_SOFTETHERVPN_SERVER=n" >> .config
-        echo "CONFIG_FIRMWARE_INCLUDE_SOFTETHERVPN_CLIENT=n" >> .config
-        echo "CONFIG_FIRMWARE_INCLUDE_SOFTETHERVPN_CMD=n" >> .config
-
-        sed -i 's/CONFIG_FIRMWARE_INCLUDE_ARIA=n/CONFIG_FIRMWARE_INCLUDE_ARIA=y/g' .config
-        sed -i 's/CONFIG_FIRMWARE_INCLUDE_ARIA_WEB_CONTROL=n/CONFIG_FIRMWARE_INCLUDE_ARIA_WEB_CONTROL=y/g' .config
-        sed -i 's/CONFIG_FIRMWARE_INCLUDE_CIFS=n/CONFIG_FIRMWARE_INCLUDE_CIFS=y/g' .config
-        sed -i 's/CONFIG_FIRMWARE_INCLUDE_DROPBEAR=n/CONFIG_FIRMWARE_INCLUDE_DROPBEAR=y/g' .config
-        sed -i 's/CONFIG_FIRMWARE_INCLUDE_DROPBEAR_FAST_CODE=n/CONFIG_FIRMWARE_INCLUDE_DROPBEAR_FAST_CODE=y/g' .config
-        sed -i 's/CONFIG_FIRMWARE_INCLUDE_CURL=y/CONFIG_FIRMWARE_INCLUDE_CURL=y/g' .config
-        sed -i 's/CONFIG_FIRMWARE_INCLUDE_VLMCSD=y/CONFIG_FIRMWARE_INCLUDE_VLMCSD=n/g' .config
-        sed -i 's/CONFIG_FIRMWARE_INCLUDE_TTYD=ys/CONFIG_FIRMWARE_INCLUDE_TTYD=n/g' .config
-        sed -i 's/CONFIG_FIRMWARE_INCLUDE_NANO=n/CONFIG_FIRMWARE_INCLUDE_NANO=y/g' .config
-        echo "CONFIG_FIRMWARE_INCLUDE_DDNSGO=y" >> .config #ddndgo
-        echo "CONFIG_FIRMWARE_INCLUDE_MSD_LITE=y" >> .config
+        echo "CONFIG_FIRMWARE_INCLUDE_OPENVPN=y" >> .config
+        echo "CONFIG_FIRMWARE_INCLUDE_SOFTETHERVPN_SERVER=y" >> .config
+        echo "CONFIG_FIRMWARE_INCLUDE_SOFTETHERVPN_CLIENT=y" >> .config
+        echo "CONFIG_FIRMWARE_INCLUDE_SOFTETHERVPN_CMD=y" >> .config
+        
         ###############################################################################
         ##########
         #自定义添加其它功能请参考源码configs/templates/目录下的config文件。按照上面的格式添加即可
@@ -175,7 +163,7 @@ jobs:
       run: |
         df -Th /workdir
         mkdir /workdir/images
-        cp rt-n56u/trunk/images/*.trx /workdir/images/K2P_`date +'%Y%m%d'`.trx
+        cp rt-n56u/trunk/images/*.trx /workdir/images/K2P_$(date +'%Y%m%d').trx
         ls -lh /workdir/images/
 
     - name : Upload packages
@@ -210,6 +198,6 @@ jobs:
         repo: ${{ github.repository }}
         keep_latest: 5
         #keep_latest: ${{ github.event.inputs.rele }}
-        delete_tags: true
+        delete_tags: false
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
