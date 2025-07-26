@@ -4,8 +4,8 @@ on:
   repository_dispatch:
   workflow_dispatch:
 
-  #schedule:
-    #- cron: '0 16 * * 6'
+  schedule:
+    - cron: '0 16 * * 6'
     
 env:
   REPO_URL: https://github.com/yer2018/Padavan-K2P
