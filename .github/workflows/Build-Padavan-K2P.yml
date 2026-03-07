@@ -1,13 +1,22 @@
 name: Build-Padavan-K2P
 
-on: 
-  repository_dispatch:
+on:
   workflow_dispatch:
+   inputs:
+      ssh:
+        description: 'SSH connection to Actions'
+        required: true
+        default: 'false'
+        type: choice
+        options:
+          - true
+          - false
+  schedule:
+    - cron: "0 0 1,16 * *"
 
-  #schedule:
-    #- cron: '0 16 * * 6'
     
 env:
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   REPO_URL: https://github.com/yer2018/Padavan-K2P
   TNAME: K2P
   KERNEL: 3.4
@@ -15,60 +24,36 @@ env:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     steps:
-    - name: 创建编译空间挂载点
-      run: |
-        sudo mkdir -p /workdir
-        sudo chown $USER:$GROUPS /workdir
+    - name: Checkout
+      uses: actions/checkout@main
         
     - name: 最大化编译空间
-      uses: easimon/maximize-build-space@master
+      uses: jlumbroso/free-disk-space@main
       with:
-        root-reserve-mb: 4096
-        swap-size-mb: 1024
-        temp-reserve-mb: 200
-        build-mount-path: /workdir
-        overprovision-lvm: 'true'
-        remove-dotnet: 'true'
-        remove-android: 'true'
-        remove-haskell: 'true'
-        remove-codeql: 'true'
-        remove-docker-images: 'true'
-        
-    - name: 检查Actions
-      uses: actions/checkout@v4
+        tool-cache: true
+        android: true
+        dotnet: true
+        haskell: true
+        large-packages: true
+        docker-images: true
+        swap-storage: true
     
-    - name: 检查服务器配置
-      run: |
-        echo "警告⚠"
-        echo "分配的服务器性能有限，若选择的插件过多，务必注意CPU性能！"
-        echo "云编译建议取消勾选Node.js及其相关插件！"
-        echo "已知CPU型号（降序）：8370C,8272CL,8171M,E5系列"
-        echo "--------------------------CPU信息--------------------------"
-        echo "CPU物理数量:$(cat /proc/cpuinfo| grep "physical id"| sort| uniq| wc -l)"
-        echo -e "CPU核心及版本信息：$(cat /proc/cpuinfo | grep name | cut -f2 -d: | uniq -c) \n"
-        echo "--------------------------内存信息--------------------------"
-        echo "已安装内存详细信息："
-        sudo lshw -short -C memory | grep GiB
-        echo -e "\n"
-        echo "--------------------------硬盘信息--------------------------"
-        echo -e  "硬盘数量：$(ls /dev/sd* | grep -v [1-9] | wc -l) \n"
-        echo "硬盘详情："
-        df -Th
-        
     - name: 初始化编译环境
       env:
         DEBIAN_FRONTEND: noninteractive
       run: |
-        sudo rm -rf /etc/apt/sources.list.d/* /usr/share/dotnet /usr/local/lib/android /opt/ghc
         sudo -E apt-get -qq update -y
         sudo -E apt-get -qq install -y unzip libtool-bin curl cmake gperf gawk flex bison nano xxd fakeroot \
         cpio git python3-docutils gettext automake autopoint texinfo build-essential help2man \
         pkg-config zlib1g-dev libgmp3-dev libmpc-dev libmpfr-dev libncurses5-dev libltdl-dev wget
         sudo -E apt-get -qq autoremove --purge
         sudo -E apt-get -qq clean
+        sudo timedatectl set-timezone "$TZ"
+        sudo mkdir -p /workdir
+        sudo chown $USER:$GROUPS /workdir
         
     - name: 克隆源码
       working-directory: /workdir
@@ -79,7 +64,7 @@ jobs:
         sh dl_toolchain.sh
         [ -d "/workdir/rt-n56u/toolchain-mipsel/toolchain-3.4.x" ] && sudo ln -svf /workdir/rt-n56u/toolchain-mipsel/toolchain-3.4.x /toolchain-3.4.x
         df -hT /workdir
-        
+        echo "FILE_DATE=$(date +"%Y%m%d")" >> $GITHUB_ENV
     - name: 加载自定义配置
       run: |
         cd rt-n56u/trunk
@@ -150,7 +135,11 @@ jobs:
         #########################################################################################
         
         sed -i 's/\r//' .config
-
+        
+    - name: SSH connect to Actions
+      uses: P3TERX/ssh2actions@main
+      if: github.event.inputs.ssh == 'true'
+      
     - name: 编译固件
       run: |
         cd rt-n56u/trunk
@@ -161,41 +150,23 @@ jobs:
       run: |
         df -Th /workdir
         mkdir /workdir/images
-        cp rt-n56u/trunk/images/*.trx /workdir/images/K2P_$(date +'%Y%m%d').trx
+        cp rt-n56u/trunk/images/*.trx /workdir/images/K2P_${{ env.FILE_DATE }}.trx
         ls -lh /workdir/images/
 
-    - name : Upload packages
-      uses: actions/upload-artifact@master
-      if: always()
+    - name: Upload firmware to release
+      uses: softprops/action-gh-release@master
       with:
-        name: Padavan-packages
-        path: /workdir/images
-
-    - name: 发布固件
-      uses: ncipollo/release-action@v1
-      with:
-        tag: padavan_K2P
-        artifacts: /workdir/images/*
-        allowUpdates: true
-        token: ${{ secrets.GITHUB_TOKEN }}
+        tag_name: Padavan-K2P_${{ env.FILE_DATE }}
+        files: ${{ env.PACKAGED_OUTPUTPATH }}/*.trx
         body: |
-          默认IP地址：10.10.10.1 
+          首次使用建议全新刷写
+          * 基本信息
+          IP: 10.10.10.1
+          账户: admin
+          密码: password
 
-    - name: 清理Actions空间
-      uses: Mattraks/delete-workflow-runs@main
-      with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          仓库: ${{ github.repository }}
-          keep_minimum_runs: 0
-          retain_days: 7
-          #retain_days: ${{ github.event.inputs.action_days }}
-    
-    - name: 删除多余releases
+    - name: Delete old releases
       uses: dev-drprasad/delete-older-releases@master
       with:
-        repo: ${{ github.repository }}
-        keep_latest: 5
-        #keep_latest: ${{ github.event.inputs.rele }}
-        delete_tags: false
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        keep_latest: 2
+        delete_tags : true
