@@ -1,6 +1,6 @@
 name: Build-Padavan-K2P
 
-于: 
+on: 
   repository_dispatch:
   workflow_dispatch:
 
