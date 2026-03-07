@@ -164,7 +164,7 @@ jobs:
           * 基本信息
           IP: 10.10.10.1
           账户: admin
-          密码: password
+          密码: admin
 
     - name: Delete old releases
       uses: dev-drprasad/delete-older-releases@master
