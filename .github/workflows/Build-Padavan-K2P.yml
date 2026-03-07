@@ -1,6 +1,6 @@
 name: Build-Padavan-K2P
 
-on: 
+于: 
   repository_dispatch:
   workflow_dispatch:
 
@@ -92,8 +92,6 @@ jobs:
         sed -i 's/192.168.2.1/10.10.10.1/g' ./user/shared/defaults.h
         sed -i 's/192.168.2.100/10.10.10.101/g' ./user/shared/defaults.h
         sed -i 's/192.168.2.244/10.10.10.199/g' ./user/shared/defaults.h
-        #修改默认wifi密码
-        sed -i '0,/1234567890/s//2019qwer/; 0,/1234567890/s//2025qwer/' ./user/shared/defaults.h
         
         ################################################################################################
         #因不同型号配置功能不一样，所以先把配置项删除，如果你自己要添加其他的，也要写上删除这一条，切记！！！
@@ -187,7 +185,7 @@ jobs:
       uses: Mattraks/delete-workflow-runs@main
       with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          repository: ${{ github.repository }}
+          仓库: ${{ github.repository }}
           keep_minimum_runs: 0
           retain_days: 7
           #retain_days: ${{ github.event.inputs.action_days }}
