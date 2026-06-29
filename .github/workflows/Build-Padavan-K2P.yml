@@ -2,7 +2,7 @@ name: Build-Padavan-K2P
 
 on:
   workflow_dispatch:
-   inputs:
+    inputs:
       ssh:
         description: 'SSH connection to Actions'
         required: true
@@ -14,7 +14,6 @@ on:
   schedule:
     - cron: "0 0 1,16 * *"
 
-    
 env:
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   REPO_URL: https://github.com/yer2018/Padavan-K2P
@@ -29,7 +28,7 @@ jobs:
     steps:
     - name: Checkout
       uses: actions/checkout@main
-        
+
     - name: 最大化编译空间
       uses: jlumbroso/free-disk-space@main
       with:
@@ -40,7 +39,7 @@ jobs:
         large-packages: true
         docker-images: true
         swap-storage: true
-    
+
     - name: 初始化编译环境
       env:
         DEBIAN_FRONTEND: noninteractive
@@ -54,7 +53,7 @@ jobs:
         sudo timedatectl set-timezone "$TZ"
         sudo mkdir -p /workdir
         sudo chown $USER:$GROUPS /workdir
-        
+
     - name: 克隆源码
       working-directory: /workdir
       run: |
@@ -65,31 +64,28 @@ jobs:
         [ -d "/workdir/rt-n56u/toolchain-mipsel/toolchain-3.4.x" ] && sudo ln -svf /workdir/rt-n56u/toolchain-mipsel/toolchain-3.4.x /toolchain-3.4.x
         df -hT /workdir
         echo "FILE_DATE=$(date +"%Y%m%d")" >> $GITHUB_ENV
+
     - name: 加载自定义配置
       run: |
         cd rt-n56u/trunk
         if [ ! -f configs/templates/$TNAME.config ] ; then
-        echo "configs/templates/$TNAME.config not found "
-        exit 1
+          echo "configs/templates/$TNAME.config not found"
+          exit 1
         fi
         cp -f configs/templates/$TNAME.config .config
-        #修改默认IP地址
+
         sed -i 's/192.168.2.1/10.10.10.1/g' ./user/shared/defaults.h
         sed -i 's/192.168.2.100/10.10.10.101/g' ./user/shared/defaults.h
         sed -i 's/192.168.2.244/10.10.10.199/g' ./user/shared/defaults.h
-        
-        ################################################################################################
-        #因不同型号配置功能不一样，所以先把配置项删除，如果你自己要添加其他的，也要写上删除这一条，切记！！！
-        ################################################################################################
-        
+
         sed -i 's/CONFIG_FIRMWARE_INCLUDE_DNSFORWARDER=y/CONFIG_FIRMWARE_INCLUDE_DNSFORWARDER=n/g' .config
         sed -i 's/CONFIG_FIRMWARE_INCLUDE_MENTOHUST=y/CONFIG_FIRMWARE_INCLUDE_MENTOHUST=n/g' .config
         sed -i 's/CONFIG_FIRMWARE_INCLUDE_SCUTCLIENT=y/CONFIG_FIRMWARE_INCLUDE_SCUTCLIENT=n/g' .config
         sed -i 's/CONFIG_FIRMWARE_INCLUDE_SRELAY=y/CONFIG_FIRMWARE_INCLUDE_SRELAY=n/g' .config
         sed -i 's/CONFIG_FIRMWARE_INCLUDE_NJIT_CLIENT=y/CONFIG_FIRMWARE_INCLUDE_NJIT_CLIENT=n/g' .config
         sed -i 's/CONFIG_FIRMWARE_INCLUDE_OPENSSL_EXE=n/CONFIG_FIRMWARE_INCLUDE_OPENSSL_EXE=y/g' .config
-        
-        sed -i '/CONFIG_FIRMWARE_INCLUDE_TRANSMISSION/d' .config 
+
+        sed -i '/CONFIG_FIRMWARE_INCLUDE_TRANSMISSION/d' .config
         sed -i '/CONFIG_FIRMWARE_INCLUDE_TRANSMISSION_WEB_CONTROL/d' .config
         sed -i '/CONFIG_FIRMWARE_INCLUDE_ARIA/d' .config
         sed -i '/CONFIG_FIRMWARE_INCLUDE_ARIA_WEB_CONTROL/d' .config
@@ -107,39 +103,26 @@ jobs:
         sed -i '/CONFIG_FIRMWARE_INCLUDE_NPC/d' .config
         sed -i '/CONFIG_FIRMWARE_WEBUI_HIDE_VPN/d' .config
         sed -i '/CONFIG_FIRMWARE_INCLUDE_OPENVPN/d' .config
-        ######################################################################
-        #以下选项是定义你需要的功能（y=集成,n=忽略），重新写入到.config文件
-        ######################################################################
-        ##内网穿透
+
         echo "CONFIG_FIRMWARE_INCLUDE_NPC=y" >> .config
-        echo "CONFIG_FIRMWARE_INCLUDE_ZEROTIER=y" >> .config #zerotier ~1.3M
-        echo "CONFIG_FIRMWARE_INCLUDE_FRPC=y" >> .config  #frpc
-        echo "CONFIG_FIRMWARE_INCLUDE_ALIDDNS=y" >> .config #aliddns
-        ##科学上网##
-        #echo "CONFIG_FIRMWARE_INCLUDE_SHADOWSOCKS=y" >> .config
-        #echo "CONFIG_FIRMWARE_INCLUDE_V2RAY=y" >> .config
-        #echo "CONFIG_FIRMWARE_INCLUDE_XRAY=y" >> .config
-        #echo "CONFIG_FIRMWARE_INCLUDE_TROJAN=y" >> .config
-        ##vpn
+        echo "CONFIG_FIRMWARE_INCLUDE_ZEROTIER=y" >> .config
+        echo "CONFIG_FIRMWARE_INCLUDE_FRPC=y" >> .config
+        echo "CONFIG_FIRMWARE_INCLUDE_ALIDDNS=y" >> .config
+
         echo "CONFIG_FIRMWARE_INCLUDE_OPENVPN=y" >> .config
         echo "CONFIG_FIRMWARE_INCLUDE_SOFTETHERVPN_SERVER=y" >> .config
         echo "CONFIG_FIRMWARE_INCLUDE_SOFTETHERVPN_CLIENT=y" >> .config
         echo "CONFIG_FIRMWARE_INCLUDE_SOFTETHERVPN_CMD=y" >> .config
-        
-        ###############################################################################
-        ##########
-        #自定义添加其它功能请参考源码configs/templates/目录下的config文件。按照上面的格式添加即可
-        #格式如下：
-        #sed -i '/自定义项/d' .config
-        #echo "自定义项=y" >> .config
-        #########################################################################################
-        
+
+        # replace SSR/ShadowSocks with mihomo
+        echo "CONFIG_FIRMWARE_INCLUDE_MIHOMO=y" >> .config
+
         sed -i 's/\r//' .config
-        
+
     - name: SSH connect to Actions
       uses: P3TERX/ssh2actions@main
       if: github.event.inputs.ssh == 'true'
-      
+
     - name: 编译固件
       run: |
         cd rt-n56u/trunk
@@ -153,6 +136,16 @@ jobs:
         cp rt-n56u/trunk/images/*.trx /workdir/images/K2P_${{ env.FILE_DATE }}.trx
         ls -lh /workdir/images/
         echo "PACKAGED_OUTPUTPATH=/workdir/images" >> $GITHUB_ENV
+
+    - name: Check firmware size (16MB limit)
+      run: |
+        FILE=$(ls /workdir/images/*.trx)
+        SIZE=$(stat -c%s "$FILE")
+        echo "Firmware size: $SIZE bytes"
+        if [ $SIZE -gt 16777216 ]; then
+          echo "Firmware too large (>16MB)"
+          exit 1
+        fi
 
     - name: Upload firmware to release
       uses: softprops/action-gh-release@master
